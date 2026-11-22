@@ -1,4 +1,5 @@
 import enum
+import logging
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical
@@ -74,7 +75,7 @@ class Festta(App):
 
             case "btn_fim":
                 self.notify("Presença finalizada")
-                self.mudar_estado(Estado.ENCERRADO)
+                self.exit()
 
     def aplicar_estado(self):
 
