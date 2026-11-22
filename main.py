@@ -83,38 +83,27 @@ class Festta(App):
         btn_retorno = self.query_one("#btn_retorno", Button)
         btn_fim = self.query_one("#btn_fim", Button)
 
-        match self.estado:
-            case Estado.AGUARDANDO_INICIO:
-                btn_ini.disabled = False
-                btn_saida.disabled = True
-                btn_retorno.disabled = True
-                btn_fim.disabled = True
+        # Esconde todos
+        btn_ini.display = False
+        btn_saida.display = False
+        btn_retorno.display = False
+        btn_fim.display = False
 
-                self.sub_title = "Aguardando o início"
+        match self.estado:
+
+            case Estado.AGUARDANDO_INICIO:
+                btn_ini.display = True
 
             case Estado.PRESENTE:
-                btn_ini.disabled = True
-                btn_saida.disabled = False
-                btn_retorno.disabled = True
-                btn_fim.disabled = False
-
-                self.sub_title = "Presença ativa"
+                btn_saida.display = True
+                btn_fim.display = True
 
             case Estado.AUSENTE_TEMPORARIO:
-                btn_ini.disabled = True
-                btn_saida.disabled = True
-                btn_retorno.disabled = False
-                btn_fim.disabled = False
-
-                self.sub_title = "Saída registrada"
+                btn_retorno.display = True
+                btn_fim.display = True
 
             case Estado.ENCERRADO:
-                btn_ini.disabled = False
-                btn_saida.disabled = True
-                btn_retorno.disabled = True
-                btn_fim.disabled = True
-
-                self.sub_title = "Presença finalizada"
+                pass
 
     def mudar_estado(self, novo_estado: Estado):
         self.estado = novo_estado
