@@ -3,9 +3,10 @@ import getpass
 import logging
 from pathlib import Path
 
+from textual.screen import ModalScreen
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical
-from textual.widgets import Header, Footer, Button
+from textual.widgets import Header, Footer, Button, Input, Label
 
 def configurar_logging() -> logging.Logger:
     log_dir = Path.home() / ".config" / "festta"
@@ -30,6 +31,42 @@ class Estado(enum.Enum):
     AUSENTE_TEMPORARIO = enum.auto()
     ENCERRADO = enum.auto()
 
+
+class MotivoSaidaScreen(ModalScreen[str]):
+
+    CSS = """
+    Screen {
+        align: center middle;
+    }
+
+    Vertical {
+        width: 60;
+        height: auto;
+        padding: 1;
+        border: round $primary;
+    }
+
+    Input {
+        margin: 1 0;
+    }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical():
+            yield Label("Informe o motivo da saída:")
+            yield Input(
+                placeholder="Ex.: Almoço, atendimento médico, reunião...",
+                id="motivo"
+            )
+            yield Button("Confirmar", id="confirmar")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        motivo = self.query_one("#motivo", Input).value.strip()
+
+        if motivo:
+            self.dismiss(motivo)
+
+
 class Festta(App):
 
     estado: Estado = Estado.AGUARDANDO_INICIO
@@ -41,6 +78,7 @@ class Festta(App):
     ]
     
     CSS = """
+
     #centro {
         width: 100%;
         height: 100%;
@@ -85,8 +123,11 @@ class Festta(App):
                 self.mudar_estado(Estado.PRESENTE)
 
             case "btn_saida":
-                self.notify("Saída registrada")
-                self.mudar_estado(Estado.AUSENTE_TEMPORARIO)
+                self.push_screen(
+                    MotivoSaidaScreen(),
+                    self.processar_saida
+                )
+
 
             case "btn_retorno":
                 self.notify("Retorno registrado")
@@ -95,6 +136,18 @@ class Festta(App):
             case "btn_fim":
                 self.notify("Presença finalizada")
                 self.exit()
+
+    def processar_saida(self, motivo: str) -> None:
+        logger.info(
+            "Saída registrada | motivo=%s",
+            motivo
+        )
+
+        self.notify("Saída registrada")
+
+        self.mudar_estado(
+            Estado.AUSENTE_TEMPORARIO
+        )
 
     def aplicar_estado(self):
 
