@@ -1,16 +1,25 @@
+import enum
+
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical
 from textual.widgets import Header, Footer, Button
 
+class Estado(enum.Enum):
+    AGUARDANDO_INICIO = enum.auto()
+    PRESENTE = enum.auto()
+    AUSENTE_TEMPORARIO = enum.auto()
+    ENCERRADO = enum.auto()
+
 class Festta(App):
 
+    estado: Estado = Estado.AGUARDANDO_INICIO
     TITLE = "Festta: Fast student attendance"
     SUB_TITLE = "Selecione uma opção"
     BINDINGS = [
         ("up", "focus_previous", "Anterior"),
         ("down", "focus_next", "Próximo")
     ]
-
+    
     CSS = """
     #centro {
         width: 100%;
@@ -29,28 +38,89 @@ class Festta(App):
     }
     """
 
+    def __init__(self):
+        super().__init__()
+        self.estado: Estado = Estado.AGUARDANDO_INICIO
+
+    def on_mount(self):
+        self.aplicar_estado()
+
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
 
         with Container(id="centro"):
             with Vertical():
-                yield Button("Iniciar presença", id="btn_ini")
+                yield Button("Iniciar presença", id="btn_ini", variant="success")
                 yield Button("Registrar saída", id="btn_saida")
                 yield Button("Registrar retorno", id="btn_retorno")
-                yield Button("Finalizar presença", id="btn_fim")
+                yield Button("Finalizar presença", id="btn_fim", variant="error")
                 
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed):
+
         match event.button.id:
             case "btn_ini":
-                self.notify("Iniciar presença")
+                self.notify("Presença iniciada")
+                self.mudar_estado(Estado.PRESENTE)
+
             case "btn_saida":
-                self.notify("Registrar saída")
+                self.notify("Saída registrada")
+                self.mudar_estado(Estado.AUSENTE_TEMPORARIO)
+
             case "btn_retorno":
-                self.notify("Registrar retorno")
+                self.notify("Retorno registrado")
+                self.mudar_estado(Estado.PRESENTE)
+
             case "btn_fim":
-                self.notify("Finalizar presença")
+                self.notify("Presença finalizada")
+                self.mudar_estado(Estado.ENCERRADO)
+
+    def aplicar_estado(self):
+
+        btn_ini = self.query_one("#btn_ini", Button)
+        btn_saida = self.query_one("#btn_saida", Button)
+        btn_retorno = self.query_one("#btn_retorno", Button)
+        btn_fim = self.query_one("#btn_fim", Button)
+
+        match self.estado:
+            case Estado.AGUARDANDO_INICIO:
+                btn_ini.disabled = False
+                btn_saida.disabled = True
+                btn_retorno.disabled = True
+                btn_fim.disabled = True
+
+                self.sub_title = "Aguardando o início"
+
+            case Estado.PRESENTE:
+                btn_ini.disabled = True
+                btn_saida.disabled = False
+                btn_retorno.disabled = True
+                btn_fim.disabled = False
+
+                self.sub_title = "Presença ativa"
+
+            case Estado.AUSENTE_TEMPORARIO:
+                btn_ini.disabled = True
+                btn_saida.disabled = True
+                btn_retorno.disabled = False
+                btn_fim.disabled = False
+
+                self.sub_title = "Saída registrada"
+
+            case Estado.ENCERRADO:
+                btn_ini.disabled = False
+                btn_saida.disabled = True
+                btn_retorno.disabled = True
+                btn_fim.disabled = True
+
+                self.sub_title = "Presença finalizada"
+
+    def mudar_estado(self, novo_estado: Estado):
+        self.estado = novo_estado
+        self.aplicar_estado()
+
+
 
 if __name__ == "__main__":
     festtapp = Festta()

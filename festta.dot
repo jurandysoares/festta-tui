@@ -1,0 +1,30 @@
+digraph Festta {
+
+    rankdir=TB;
+
+    node [shape=ellipse];
+
+    inicio [shape=point];
+    fim [shape=doublecircle, label="Encerrado"];
+
+    aguardando [label="Aguardando início"];
+    presente [label="Presente"];
+    ausente [label="Ausente temporário"];
+
+    inicio -> aguardando;
+
+    aguardando -> presente
+        [label="Iniciar presença"];
+
+    presente -> ausente
+        [label="Registrar saída"];
+
+    ausente -> presente
+        [label="Registrar retorno"];
+
+    presente -> fim
+        [label="Finalizar presença"];
+
+    ausente -> fim
+        [label="Finalizar presença"];
+}
