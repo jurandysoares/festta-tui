@@ -116,3 +116,15 @@ stateDiagram-v2
 
     ENCERRADO --> [*]
 ```
+
+Tabela com estados e ação que provoca sua transição.
+
+| Estado atual       | Ação               | Próximo estado     |
+| ------------------ | ------------------ | ------------------ |
+| AGUARDANDO_INICIO  | Iniciar presença   | PRESENTE           |
+| PRESENTE           | Registrar saída    | AUSENTE_TEMPORARIO |
+| AUSENTE_TEMPORARIO | Registrar retorno  | PRESENTE           |
+| PRESENTE           | Finalizar presença | ENCERRADO          |
+| AUSENTE_TEMPORARIO | Finalizar presença | ENCERRADO          |
+| ENCERRADO          | Iniciar presença   | PRESENTE           |
+
