@@ -1,0 +1,2 @@
+# festta
+Fast student attendance
