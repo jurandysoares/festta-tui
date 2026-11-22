@@ -1,9 +1,28 @@
 import enum
+import getpass
 import logging
+from pathlib import Path
 
 from textual.app import App, ComposeResult
 from textual.containers import Container, Vertical
 from textual.widgets import Header, Footer, Button
+
+def configurar_logging() -> logging.Logger:
+    log_dir = Path.home() / ".config" / "festta"
+    log_dir.mkdir(parents=True, exist_ok=True)
+
+    log_file = log_dir / f"festta-log-{getpass.getuser()}.log"
+
+    logging.basicConfig(
+        filename=log_file,
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(message)s",
+        encoding="utf-8",
+    )
+
+    return logging.getLogger("festta")
+
+logger = configurar_logging()
 
 class Estado(enum.Enum):
     AGUARDANDO_INICIO = enum.auto()
@@ -107,11 +126,18 @@ class Festta(App):
                 pass
 
     def mudar_estado(self, novo_estado: Estado):
+
+        logger.info(
+            "FSM: %s -> %s",
+            self.estado.name,
+            novo_estado.name
+        )
+
         self.estado = novo_estado
         self.aplicar_estado()
 
 
-
 if __name__ == "__main__":
     festtapp = Festta()
+    logger.info("Aplicação iniciada.")
     festtapp.run()
