@@ -1,6 +1,8 @@
 # festta
 
-Fast student attendance
+Fast student attendance.
+
+<https://copilot.cloud.microsoft/chat/share/eyJzaGFyZUlkIjoiMGM1Mzk3NTktNGM4YS00ZGQ2LWJmNTUtYjM4NjZhODdhZDdiIiwiY29udmVyc2F0aW9uSWQiOiI1YmRkMzMwMC1iZDQ1LTQxNjYtYmIxNC0xODM3ZGZiNjI1ZGUifQ%3D%3D>
 
 ## Funcionalidades
 
