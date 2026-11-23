@@ -5,7 +5,7 @@ from pathlib import Path
 
 from textual.screen import ModalScreen
 from textual.app import App, ComposeResult
-from textual.containers import Container, Vertical
+from textual.containers import Container, Horizontal, Vertical
 from textual.widgets import Header, Footer, Button, Input, Label
 
 def configurar_logging() -> logging.Logger:
@@ -49,22 +49,51 @@ class MotivoSaidaScreen(ModalScreen[str]):
     Input {
         margin: 1 0;
     }
+
+    .botoes {
+        width: 100%;
+        align: center middle;
+        height: auto;
+    }
+    
+    .botoes Button {
+        margin: 1 1;
+        width: 20;
+    }
     """
 
     def compose(self) -> ComposeResult:
         with Vertical():
             yield Label("Informe o motivo da saída:")
+
             yield Input(
                 placeholder="Ex.: Almoço, atendimento médico, reunião...",
                 id="motivo"
             )
-            yield Button("Confirmar", id="confirmar")
+
+            with Horizontal(classes="botoes"):
+                yield Button(
+                    "Confirmar", 
+                    id="confirmar", 
+                    variant="success"
+                    )
+
+                yield Button(
+                    "Cancelar",
+                    id="cancelar",
+                    variant="default"
+                )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        motivo = self.query_one("#motivo", Input).value.strip()
+        if event.button.id == "confirmar":
+        
+            motivo = self.query_one("#motivo", Input).value.strip()
 
-        if motivo:
-            self.dismiss(motivo)
+            if motivo:
+                self.dismiss(motivo)
+
+        elif event.button.id == "cancelar":
+            self.dismiss(None)
 
 
 class Festta(App):
@@ -137,7 +166,13 @@ class Festta(App):
                 self.notify("Presença finalizada")
                 self.exit()
 
-    def processar_saida(self, motivo: str) -> None:
+    def processar_saida(self, motivo: str | None) -> None:
+
+        if motivo is None:
+            logger.info("Solicitação de saída cancelada")
+            self.notify("Operação cancelada")
+            return
+        
         logger.info(
             "Saída registrada | motivo=%s",
             motivo
