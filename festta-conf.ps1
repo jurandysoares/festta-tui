@@ -8,7 +8,7 @@ $reg_presenca = @{
     nome      = $ldap.displayname[0]
     prenome   = $ldap.givenname[0]
     sobrenome = $ldap.sn[0]
-    dataNascimento = $ldap.extensionattribute7[0]
+    datanascimento  = $ldap.extensionattribute7[0]
     email     = $ldap.extensionattribute5[0]
     hostname  = $env:COMPUTERNAME
     # TODO: Número do PC (Dica: solicitar para o usuário)

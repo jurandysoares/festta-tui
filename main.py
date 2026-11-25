@@ -42,7 +42,7 @@ class Estado(enum.Enum):
     ENCERRADO = enum.auto()
 
 
-class MotivoSaidaScreen(ModalScreen[str]):
+class MotivoSaidaScreen(ModalScreen[str | None]):
 
     CSS = """
     Screen {
@@ -100,6 +100,8 @@ class MotivoSaidaScreen(ModalScreen[str]):
 
             if motivo:
                 self.dismiss(motivo)
+            else:
+                self.notify("Informe um motivo antes de confirmar.", severity="warning")
 
         elif event.button.id == "cancelar":
             self.dismiss(None)
@@ -155,7 +157,7 @@ class Festta(App):
     def on_button_pressed(self, event: Button.Pressed):
         match event.button.id:
             case "btn_ini":
-                self.iniciar_presenca_worker()
+                self.registrar_inicio_worker()
 
             case "btn_saida":
                 self.push_screen(
@@ -164,12 +166,10 @@ class Festta(App):
                 )
 
             case "btn_retorno":
-                self.notify("Retorno registrado")
-                self.mudar_estado(Estado.PRESENTE)
+                self.registrar_retorno_worker()
 
             case "btn_fim":
-                self.notify("Presença finalizada")
-                self.exit()
+                self.registrar_fim_worker()
 
     async def executar_script_conf(self) -> None:
         """Executa festta-conf.ps1 para gerar o arquivo ~/.config/festta/festta-conf.json."""
@@ -220,60 +220,107 @@ class Festta(App):
         else:
             logger.info("Carregando configuração existente de %s", ARQUIVO_CONF)
 
-        # utf-8-sig ignora o BOM eventual gravado pelo Set-Content -Encoding UTF8 do Windows PowerShell
         conteudo = ARQUIVO_CONF.read_text(encoding="utf-8-sig")
         return json.loads(conteudo)
 
-    @work(exclusive=True)
-    async def iniciar_presenca_worker(self) -> None:
-        btn_ini = self.query_one("#btn_ini", Button)
-        btn_ini.disabled = True
-        self.notify("Preparando dados e registrando presença...")
+    def definir_botoes_habilitados(self, habilitado: bool) -> None:
+        for btn_id in ("#btn_ini", "#btn_saida", "#btn_retorno", "#btn_fim"):
+            self.query_one(btn_id, Button).disabled = not habilitado
 
+    async def enviar_evento_api(self, rota: str, dados_extras: dict | None = None) -> bool:
+        """Obtém os dados do usuário, mescla campos extras (ex: motivo) e envia para a rota da API."""
+        self.definir_botoes_habilitados(False)
         try:
             payload = await self.obter_configuracao_presenca()
-            logger.info("Enviando dados de presença: %s", payload)
+            if dados_extras:
+                payload.update(dados_extras)
+
+            url = f"{ENDPOINT_PRESENCA}/{rota}"
+            logger.info("Enviando requisição para %s | payload=%s", url, payload)
 
             resposta = await asyncio.to_thread(
                 requests.post,
-                ENDPOINT_PRESENCA,
+                url,
                 json=payload,
                 timeout=15,
             )
             resposta.raise_for_status()
 
             logger.info(
-                "Presença iniciada com sucesso | status=%s | resposta=%s",
+                "Evento '%s' registrado com sucesso | status=%s | resposta=%s",
+                rota,
                 resposta.status_code,
                 resposta.text,
             )
-            self.notify("Presença iniciada com sucesso!")
-            self.mudar_estado(Estado.PRESENTE)
+            return True
 
         except json.JSONDecodeError as exc:
             logger.exception("Conteúdo inválido em %s: %s", ARQUIVO_CONF, exc)
             self.notify("Erro: arquivo festta-conf.json inválido.", severity="error")
+            return False
+
+        except requests.HTTPError as exc:
+            detalhe = ""
+            if exc.response is not None:
+                try:
+                    detalhe = exc.response.json().get("detail", exc.response.text)
+                except ValueError:
+                    detalhe = exc.response.text
+            logger.exception("Erro HTTP (%s) em /%s: %s", getattr(exc.response, "status_code", "?"), rota, detalhe)
+            self.notify(f"Erro na API: {detalhe or exc}", severity="error")
+            return False
 
         except requests.RequestException as exc:
-            logger.exception("Erro na requisição HTTP ao registrar presença: %s", exc)
+            logger.exception("Erro de comunicação em /%s: %s", rota, exc)
             self.notify("Falha de comunicação com o servidor de presença.", severity="error")
+            return False
 
         except Exception as exc:
-            logger.exception("Erro ao iniciar presença: %s", exc)
+            logger.exception("Erro inesperado ao processar /%s: %s", rota, exc)
             self.notify(f"Erro: {exc}", severity="error")
+            return False
 
         finally:
-            btn_ini.disabled = False
+            self.definir_botoes_habilitados(True)
+
+    @work(exclusive=True)
+    async def registrar_inicio_worker(self) -> None:
+        self.notify("Registrando início da presença...")
+        if await self.enviar_evento_api("inicio"):
+            self.notify("Presença iniciada com sucesso!")
+            self.mudar_estado(Estado.PRESENTE)
 
     def processar_saida(self, motivo: str | None) -> None:
         if motivo is None:
             logger.info("Solicitação de saída cancelada")
             self.notify("Operação cancelada")
             return
-        
-        logger.info("Saída registrada | motivo=%s", motivo)
-        self.notify("Saída registrada")
-        self.mudar_estado(Estado.AUSENTE_TEMPORARIO)
+
+        self.registrar_saida_worker(motivo)
+
+    @work(exclusive=True)
+    async def registrar_saida_worker(self, motivo: str) -> None:
+        self.notify("Registrando saída...")
+        if await self.enviar_evento_api("saida", {"motivo": motivo}):
+            logger.info("Saída registrada | motivo=%s", motivo)
+            self.notify("Saída registrada com sucesso!")
+            self.mudar_estado(Estado.AUSENTE_TEMPORARIO)
+
+    @work(exclusive=True)
+    async def registrar_retorno_worker(self) -> None:
+        self.notify("Registrando retorno...")
+        if await self.enviar_evento_api("retorno"):
+            self.notify("Retorno registrado com sucesso!")
+            self.mudar_estado(Estado.PRESENTE)
+
+    @work(exclusive=True)
+    async def registrar_fim_worker(self) -> None:
+        self.notify("Finalizando presença...")
+        if await self.enviar_evento_api("fim"):
+            self.notify("Presença finalizada com sucesso!")
+            self.mudar_estado(Estado.ENCERRADO)
+            await asyncio.sleep(1.0)
+            self.exit()
 
     def aplicar_estado(self):
         btn_ini = self.query_one("#btn_ini", Button)
