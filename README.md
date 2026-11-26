@@ -11,6 +11,10 @@ Fast student attendance.
 3. Registrar retorno
 4. Finalizar presença
 
+## Instalação
+
+Abra o Git Bash no Windows e execute:
+- `curl -fsSL https://raw.githubusercontent.com/jurandysoares/festta-tui/main/install.sh | bash`
 
 ## Máquina de estados finita
 
