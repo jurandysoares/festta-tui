@@ -13,8 +13,8 @@ Fast student attendance.
 
 ## Instalação
 
-Abra o Git Bash no Windows e execute:
-- `curl -fsSL https://raw.githubusercontent.com/jurandysoares/festta-tui/main/install.sh | bash`
+Abra o PowerShell ou o WindowsTerminal e execute:
+- `irm https://raw.githubusercontent.com/jurandysoares/festta-tui/main/install.ps1 | iex`
 
 ## Máquina de estados finita
 
